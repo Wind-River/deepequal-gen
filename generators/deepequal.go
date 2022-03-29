@@ -326,7 +326,7 @@ func deepEqualMethod(t *types.Type) (*types.Signature, error) {
 	if len(f.Signature.Parameters) != 1 {
 		return nil, fmt.Errorf("type %v: invalid DeepEqual signature, expected exactly one parameter", t)
 	}
-	if len(f.Signature.Results) != 1 {
+	if len(f.Signature.Results) != 1 || f.Signature.Results[0].Name.Name != "bool" {
 		return nil, fmt.Errorf("type %v: invalid DeepEqual signature, expected bool result type", t)
 	}
 
