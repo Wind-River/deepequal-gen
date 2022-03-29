@@ -664,6 +664,22 @@ func (g *genDeepEqual) doSlice(t *types.Type, sw *generator.SnippetWriter) {
 	sw.Do("}\n", nil)
 }
 
+func HasEqual(t *types.Type) (hasEqual, pointerParameter bool) {
+	method := t.Methods["Equal"]
+	if method == nil {
+		return
+	}
+
+	signature := method.Signature
+	results := len(signature.Results) == 1 && signature.Results[0] == types.Bool
+	parameters := len(signature.Parameters) == 1 && signature.Parameters[0].Name == t.Name
+	hasEqual = results && parameters
+	if hasEqual {
+		pointerParameter = method.Signature.Parameters[0].Kind == types.Pointer
+	}
+	return
+}
+
 // IsAssignable returns whether the type is deep-assignable.  For example,
 // slices and maps and pointers are shallow copies, but ints and strings are
 // complete.
@@ -749,6 +765,12 @@ func (g *genDeepEqual) doStruct(t *types.Type, sw *generator.SnippetWriter) {
 		case uft.Kind == types.Struct:
 			if IsComparable(uft) {
 				sw.Do("if in.$.name$ != other.$.name$ {\n", typeArgs)
+			} else if hasEqual, pointer := HasEqual(uft); hasEqual {
+				if pointer {
+					sw.Do("if !in.$.name$.Equal(&other.$.name$) {\n", typeArgs)
+				} else {
+					sw.Do("if !in.$.name$.Equal(other.$.name$) {\n", typeArgs)
+				}
 			} else {
 				sw.Do("if !in.$.name$.DeepEqual(&other.$.name$) {\n", typeArgs)
 			}

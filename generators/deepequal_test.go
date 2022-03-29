@@ -303,3 +303,143 @@ func Test_extractTagParams(t *testing.T) {
 		}
 	}
 }
+
+func Test_HasEqual(t *testing.T) {
+	testCases := []struct {
+		typ              *types.Type
+		name             string
+		hasEqual         bool
+		pointerParameter bool
+	}{
+		{
+			typ: &types.Type{
+				Methods: map[string]*types.Type{},
+			},
+			name: "no methods",
+		},
+		{
+			typ: &types.Type{
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Byte,
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with wrong result type",
+		},
+		{
+			typ: &types.Type{
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool, types.Byte,
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with wrong number of results",
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "wrong", Name: "Bar"},
+								},
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with correct result but wrong parameter type",
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "foo", Name: "Bar"},
+								},
+								{
+									Name: types.Name{Package: "wrong", Name: "What"},
+								},
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with correct result but wrong number of parameters",
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "foo", Name: "Bar"},
+									Kind: types.Pointer,
+								},
+							},
+						},
+					},
+				},
+			},
+			name:             "Equal method with correct result and pointer parameter type",
+			hasEqual:         true,
+			pointerParameter: true,
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "foo", Name: "Bar"},
+									Kind: types.Struct,
+								},
+							},
+						},
+					},
+				},
+			},
+			name:     "Equal method with correct result and value parameter type",
+			hasEqual: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		hasEqual, pointer := HasEqual(tc.typ)
+		if hasEqual != tc.hasEqual || pointer != tc.pointerParameter {
+			t.Errorf("Expected hasEqual=%t and pointer=%t, got hasEqual=%t and pointer=%t", tc.hasEqual, tc.pointerParameter, hasEqual, pointer)
+		}
+
+	}
+}
