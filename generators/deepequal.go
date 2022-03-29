@@ -311,17 +311,6 @@ func (g *genDeepEqual) Filter(c *generator.Context, t *types.Type) bool {
 	return true
 }
 
-func (g *genDeepEqual) copyableAndInBounds(t *types.Type) bool {
-	if !comparableType(t) {
-		return false
-	}
-	// Only packages within the restricted range can be processed.
-	if !isRootedUnder(t.Name.Package, g.boundingDirs) {
-		return false
-	}
-	return true
-}
-
 // deepEqualMethod returns the signature of a DeepEqual() method, nil or an error
 // if the type is wrong. DeepEqual allows more efficient deep copy
 // implementations to be defined by the type's author.  The correct signature
@@ -366,18 +355,6 @@ func deepEqualMethodOrDie(t *types.Type) *types.Signature {
 		klog.Fatal(err)
 	}
 	return ret
-}
-
-func isRootedUnder(pkg string, roots []string) bool {
-	// Add trailing / to avoid false matches, e.g. foo/bar vs foo/barn.  This
-	// assumes that bounding dirs do not have trailing slashes.
-	pkg = pkg + "/"
-	for _, root := range roots {
-		if strings.HasPrefix(pkg, root+"/") {
-			return true
-		}
-	}
-	return false
 }
 
 func comparableType(t *types.Type) bool {
