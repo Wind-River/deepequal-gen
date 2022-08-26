@@ -1,1 +1,4 @@
 output_tests.diff
+go.mod
+go.sum
+.vscode

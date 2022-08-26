@@ -24,7 +24,8 @@ import (
 // CustomArgs is used tby the go2idl framework to pass args specific to this
 // generator.
 type CustomArgs struct {
-	BoundingDirs []string // Only deal with types rooted under these dirs.
+	BoundingDirs   []string // Only deal with types rooted under these dirs.
+	GenPackagePath string   // Overwritten package path to be generated
 }
 
 // This is the comment tag that carries parameters for deep-copy generation.
@@ -185,6 +186,14 @@ func Packages(context *generator.Context, arguments *args.GeneratorArgs) generat
 		}
 	}
 
+	// Obtain override package path value
+	genPackagePath := ""
+	if customArgs, ok := arguments.CustomArgs.(*CustomArgs); ok {
+		if len(customArgs.GenPackagePath) > 0 {
+			genPackagePath = customArgs.GenPackagePath
+		}
+	}
+
 	for i := range inputs {
 		klog.V(5).Infof("Considering pkg %q", i)
 		pkg := context.Universe[i]
@@ -241,6 +250,10 @@ func Packages(context *generator.Context, arguments *args.GeneratorArgs) generat
 				if strings.Contains(expandedPath, "/vendor/") {
 					path = expandedPath
 				}
+			}
+			// Set override package path if it is set.
+			if len(genPackagePath) > 0 {
+				path = genPackagePath
 			}
 			packages = append(packages,
 				&generator.DefaultPackage{
