@@ -28,6 +28,8 @@ func main() {
 	customArgs := &generators.CustomArgs{}
 	pflag.CommandLine.StringSliceVar(&customArgs.BoundingDirs, "bounding-dirs", customArgs.BoundingDirs,
 		"Comma-separated list of import paths which bound the types for which deep-copies will be generated.")
+	pflag.CommandLine.StringVar(&customArgs.GenPackagePath, "gen-package-path", customArgs.GenPackagePath,
+		"Override generated package path which deep-copies will be generated.")
 	arguments.CustomArgs = customArgs
 
 	// Run it.
