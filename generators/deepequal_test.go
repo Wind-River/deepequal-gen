@@ -12,89 +12,6 @@ import (
 	"k8s.io/gengo/types"
 )
 
-func Test_isRootedUnder(t *testing.T) {
-	testCases := []struct {
-		path   string
-		roots  []string
-		expect bool
-	}{
-		{
-			path:   "/foo/bar",
-			roots:  nil,
-			expect: false,
-		},
-		{
-			path:   "/foo/bar",
-			roots:  []string{},
-			expect: false,
-		},
-		{
-			path: "/foo/bar",
-			roots: []string{
-				"/bad",
-			},
-			expect: false,
-		},
-		{
-			path: "/foo/bar",
-			roots: []string{
-				"/foo",
-			},
-			expect: true,
-		},
-		{
-			path: "/foo/bar",
-			roots: []string{
-				"/bad",
-				"/foo",
-			},
-			expect: true,
-		},
-		{
-			path: "/foo/bar/qux/zorb",
-			roots: []string{
-				"/foo/bar/qux",
-			},
-			expect: true,
-		},
-		{
-			path: "/foo/bar",
-			roots: []string{
-				"/foo/bar",
-			},
-			expect: true,
-		},
-		{
-			path: "/foo/barn",
-			roots: []string{
-				"/foo/bar",
-			},
-			expect: false,
-		},
-		{
-			path: "/foo/bar",
-			roots: []string{
-				"/foo/barn",
-			},
-			expect: false,
-		},
-		{
-			path: "/foo/bar",
-			roots: []string{
-				"",
-			},
-			expect: true,
-		},
-	}
-
-	for i, tc := range testCases {
-		r := isRootedUnder(tc.path, tc.roots)
-		if r != tc.expect {
-			t.Errorf("case[%d]: expected %t, got %t for %q in %q", i, tc.expect, r, tc.path, tc.roots)
-		}
-	}
-}
-
 func Test_deepEqualMethod(t *testing.T) {
 	testCases := []struct {
 		typ    types.Type
@@ -105,7 +22,7 @@ func Test_deepEqualMethod(t *testing.T) {
 			typ: types.Type{
 				Name: types.Name{Package: "pkgname", Name: "typename"},
 				Kind: types.Builtin,
-				// No DeepCopyInto method.
+				// No DeepEqual method.
 				Methods: map[string]*types.Type{},
 			},
 			expect: false,
@@ -115,7 +32,7 @@ func Test_deepEqualMethod(t *testing.T) {
 				Name: types.Name{Package: "pkgname", Name: "typename"},
 				Kind: types.Builtin,
 				Methods: map[string]*types.Type{
-					// No DeepCopyInto method.
+					// No DeepEqual method.
 					"method": {
 						Name: types.Name{Package: "pkgname", Name: "func()"},
 						Kind: types.Func,
@@ -138,7 +55,7 @@ func Test_deepEqualMethod(t *testing.T) {
 				Kind: types.Builtin,
 				Methods: map[string]*types.Type{
 					// Wrong signature (no parameter).
-					"DeepCopyInto": {
+					"DeepEqual": {
 						Name: types.Name{Package: "pkgname", Name: "func()"},
 						Kind: types.Func,
 						Signature: &types.Signature{
@@ -161,7 +78,7 @@ func Test_deepEqualMethod(t *testing.T) {
 				Kind: types.Builtin,
 				Methods: map[string]*types.Type{
 					// Wrong signature (unexpected result).
-					"DeepCopyInto": {
+					"DeepEqual": {
 						Name: types.Name{Package: "pkgname", Name: "func(*pkgname.typename) int"},
 						Kind: types.Func,
 						Signature: &types.Signature{
@@ -194,7 +111,7 @@ func Test_deepEqualMethod(t *testing.T) {
 				Kind: types.Builtin,
 				Methods: map[string]*types.Type{
 					// Wrong signature (non-pointer parameter, pointer receiver).
-					"DeepCopyInto": {
+					"DeepEqual": {
 						Name: types.Name{Package: "pkgname", Name: "func(pkgname.typename)"},
 						Kind: types.Func,
 						Signature: &types.Signature{
@@ -219,7 +136,7 @@ func Test_deepEqualMethod(t *testing.T) {
 				Kind: types.Builtin,
 				Methods: map[string]*types.Type{
 					// Wrong signature (non-pointer parameter, non-pointer receiver).
-					"DeepCopyInto": {
+					"DeepEqual": {
 						Name: types.Name{Package: "pkgname", Name: "func(pkgname.typename)"},
 						Kind: types.Func,
 						Signature: &types.Signature{
@@ -241,7 +158,7 @@ func Test_deepEqualMethod(t *testing.T) {
 				Kind: types.Builtin,
 				Methods: map[string]*types.Type{
 					// Correct signature with non-pointer receiver.
-					"DeepCopyInto": {
+					"DeepEqual": {
 						Name: types.Name{Package: "pkgname", Name: "func(*pkgname.typename)"},
 						Kind: types.Func,
 						Signature: &types.Signature{
@@ -252,7 +169,12 @@ func Test_deepEqualMethod(t *testing.T) {
 									Elem: &types.Type{Kind: types.Struct, Name: types.Name{Package: "pkgname", Name: "typename"}},
 								},
 							},
-							Results: []*types.Type{},
+							Results: []*types.Type{
+								{
+									Name: types.Name{Name: "bool"},
+									Kind: types.Builtin,
+								},
+							},
 						},
 					},
 				},
@@ -265,7 +187,7 @@ func Test_deepEqualMethod(t *testing.T) {
 				Kind: types.Builtin,
 				Methods: map[string]*types.Type{
 					// Correct signature with pointer receiver.
-					"DeepCopyInto": {
+					"DeepEqual": {
 						Name: types.Name{Package: "pkgname", Name: "func(*pkgname.typename)"},
 						Kind: types.Func,
 						Signature: &types.Signature{
@@ -279,7 +201,12 @@ func Test_deepEqualMethod(t *testing.T) {
 									Elem: &types.Type{Kind: types.Struct, Name: types.Name{Package: "pkgname", Name: "typename"}},
 								},
 							},
-							Results: []*types.Type{},
+							Results: []*types.Type{
+								{
+									Name: types.Name{Name: "bool"},
+									Kind: types.Builtin,
+								},
+							},
 						},
 					},
 				},
@@ -314,7 +241,7 @@ func Test_extractTagParams(t *testing.T) {
 		{
 			comments: []string{
 				"Human comment",
-				"+k8s:deepcopy-gen",
+				"+" + tagEnabledName,
 			},
 			expect: &enabledTagValue{
 				value:    "",
@@ -324,7 +251,7 @@ func Test_extractTagParams(t *testing.T) {
 		{
 			comments: []string{
 				"Human comment",
-				"+k8s:deepcopy-gen=package",
+				"+" + tagEnabledName + "=package",
 			},
 			expect: &enabledTagValue{
 				value:    "package",
@@ -334,7 +261,7 @@ func Test_extractTagParams(t *testing.T) {
 		{
 			comments: []string{
 				"Human comment",
-				"+k8s:deepcopy-gen=package,register",
+				"+" + tagEnabledName + "=package,register",
 			},
 			expect: &enabledTagValue{
 				value:    "package",
@@ -344,7 +271,7 @@ func Test_extractTagParams(t *testing.T) {
 		{
 			comments: []string{
 				"Human comment",
-				"+k8s:deepcopy-gen=package,register=true",
+				"+" + tagEnabledName + "=package,register=true",
 			},
 			expect: &enabledTagValue{
 				value:    "package",
@@ -354,7 +281,7 @@ func Test_extractTagParams(t *testing.T) {
 		{
 			comments: []string{
 				"Human comment",
-				"+k8s:deepcopy-gen=package,register=false",
+				"+" + tagEnabledName + "=package,register=false",
 			},
 			expect: &enabledTagValue{
 				value:    "package",
@@ -374,5 +301,145 @@ func Test_extractTagParams(t *testing.T) {
 		if r != nil && *r != *tc.expect {
 			t.Errorf("case[%d]: expected %v, got %v", i, *tc.expect, *r)
 		}
+	}
+}
+
+func Test_HasEqual(t *testing.T) {
+	testCases := []struct {
+		typ              *types.Type
+		name             string
+		hasEqual         bool
+		pointerParameter bool
+	}{
+		{
+			typ: &types.Type{
+				Methods: map[string]*types.Type{},
+			},
+			name: "no methods",
+		},
+		{
+			typ: &types.Type{
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Byte,
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with wrong result type",
+		},
+		{
+			typ: &types.Type{
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool, types.Byte,
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with wrong number of results",
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "wrong", Name: "Bar"},
+								},
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with correct result but wrong parameter type",
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "foo", Name: "Bar"},
+								},
+								{
+									Name: types.Name{Package: "wrong", Name: "What"},
+								},
+							},
+						},
+					},
+				},
+			},
+			name: "Equal method with correct result but wrong number of parameters",
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "foo", Name: "Bar"},
+									Kind: types.Pointer,
+								},
+							},
+						},
+					},
+				},
+			},
+			name:             "Equal method with correct result and pointer parameter type",
+			hasEqual:         true,
+			pointerParameter: true,
+		},
+		{
+			typ: &types.Type{
+				Name: types.Name{Package: "foo", Name: "Bar"},
+				Methods: map[string]*types.Type{
+					"Equal": {
+						Signature: &types.Signature{
+							Results: []*types.Type{
+								types.Bool,
+							},
+							Parameters: []*types.Type{
+								{
+									Name: types.Name{Package: "foo", Name: "Bar"},
+									Kind: types.Struct,
+								},
+							},
+						},
+					},
+				},
+			},
+			name:     "Equal method with correct result and value parameter type",
+			hasEqual: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		hasEqual, pointer := HasEqual(tc.typ)
+		if hasEqual != tc.hasEqual || pointer != tc.pointerParameter {
+			t.Errorf("Expected hasEqual=%t and pointer=%t, got hasEqual=%t and pointer=%t", tc.hasEqual, tc.pointerParameter, hasEqual, pointer)
+		}
+
 	}
 }

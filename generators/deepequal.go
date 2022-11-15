@@ -324,17 +324,6 @@ func (g *genDeepEqual) Filter(c *generator.Context, t *types.Type) bool {
 	return true
 }
 
-func (g *genDeepEqual) copyableAndInBounds(t *types.Type) bool {
-	if !comparableType(t) {
-		return false
-	}
-	// Only packages within the restricted range can be processed.
-	if !isRootedUnder(t.Name.Package, g.boundingDirs) {
-		return false
-	}
-	return true
-}
-
 // deepEqualMethod returns the signature of a DeepEqual() method, nil or an error
 // if the type is wrong. DeepEqual allows more efficient deep copy
 // implementations to be defined by the type's author.  The correct signature
@@ -350,7 +339,7 @@ func deepEqualMethod(t *types.Type) (*types.Signature, error) {
 	if len(f.Signature.Parameters) != 1 {
 		return nil, fmt.Errorf("type %v: invalid DeepEqual signature, expected exactly one parameter", t)
 	}
-	if len(f.Signature.Results) != 1 {
+	if len(f.Signature.Results) != 1 || f.Signature.Results[0].Name.Name != "bool" {
 		return nil, fmt.Errorf("type %v: invalid DeepEqual signature, expected bool result type", t)
 	}
 
@@ -379,18 +368,6 @@ func deepEqualMethodOrDie(t *types.Type) *types.Signature {
 		klog.Fatal(err)
 	}
 	return ret
-}
-
-func isRootedUnder(pkg string, roots []string) bool {
-	// Add trailing / to avoid false matches, e.g. foo/bar vs foo/barn.  This
-	// assumes that bounding dirs do not have trailing slashes.
-	pkg = pkg + "/"
-	for _, root := range roots {
-		if strings.HasPrefix(pkg, root+"/") {
-			return true
-		}
-	}
-	return false
 }
 
 func comparableType(t *types.Type) bool {
@@ -700,6 +677,22 @@ func (g *genDeepEqual) doSlice(t *types.Type, sw *generator.SnippetWriter) {
 	sw.Do("}\n", nil)
 }
 
+func HasEqual(t *types.Type) (hasEqual, pointerParameter bool) {
+	method := t.Methods["Equal"]
+	if method == nil {
+		return
+	}
+
+	signature := method.Signature
+	results := len(signature.Results) == 1 && signature.Results[0] == types.Bool
+	parameters := len(signature.Parameters) == 1 && signature.Parameters[0].Name == t.Name
+	hasEqual = results && parameters
+	if hasEqual {
+		pointerParameter = method.Signature.Parameters[0].Kind == types.Pointer
+	}
+	return
+}
+
 // IsAssignable returns whether the type is deep-assignable.  For example,
 // slices and maps and pointers are shallow copies, but ints and strings are
 // complete.
@@ -785,6 +778,12 @@ func (g *genDeepEqual) doStruct(t *types.Type, sw *generator.SnippetWriter) {
 		case uft.Kind == types.Struct:
 			if IsComparable(uft) {
 				sw.Do("if in.$.name$ != other.$.name$ {\n", typeArgs)
+			} else if hasEqual, pointer := HasEqual(uft); hasEqual {
+				if pointer {
+					sw.Do("if !in.$.name$.Equal(&other.$.name$) {\n", typeArgs)
+				} else {
+					sw.Do("if !in.$.name$.Equal(other.$.name$) {\n", typeArgs)
+				}
 			} else {
 				sw.Do("if !in.$.name$.DeepEqual(&other.$.name$) {\n", typeArgs)
 			}
